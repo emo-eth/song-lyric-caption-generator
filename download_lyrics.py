@@ -55,7 +55,7 @@ def download_lyrics(artist_name):
     word_to_indices = {}
     title_to_lines = {}
 
-    song_lyrics = pylyrics3.get_artist_lyrics("Drake")
+    song_lyrics = pylyrics3.get_artist_lyrics(artist_name)
     for title, lyrics in song_lyrics.items():
         lines = split_lines(lyrics)
         title_to_lines[title] = lines
