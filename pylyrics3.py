@@ -1,3 +1,4 @@
+import datetime
 import re
 
 from bs4 import BeautifulSoup
@@ -21,13 +22,13 @@ def get_artist_lyrics(artist):
         print("Sorry, we couldn't find a Wiki for '%s' on LyricWiki." % artist)
         return
     song_urls = __get_artist_song_links(soup, artist)
-    lyrics = []
+    title_to_lyrics = {}
     for url in song_urls:
-        song = {}
         title = __from_lyricwikicase(url.split(":")[2])
-        song[title] = get_lyrics_from_url(url)
-        lyrics.append(song)
-    return lyrics
+        lyrics = get_lyrics_from_url(url)
+        if lyrics:
+            title_to_lyrics[title] = lyrics
+    return title_to_lyrics
 
 
 def get_song_lyrics(artist, title):
@@ -141,5 +142,3 @@ def __get_soup(url, headers=None, cookies=None, timeout=None, fail=True):
 def __check_response(status_code):
     first_digit = status_code // 100
     assert first_digit in {2, 3}
-
-get_artist_lyrics("Drake")
