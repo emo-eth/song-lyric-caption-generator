@@ -2,7 +2,9 @@
 """
 import json
 import sys
+from semspaces.space import SemanticSpace
 
+NUM_SIMILAR_WORDS = 5
 word_indices = {}
 lyrics = {}
 
@@ -32,32 +34,54 @@ def get_surrounding_lines(lines, index):
     return " / \n".join(caption_lines)
 
 
-def find_candidate_captions(artist, word):
+def find_candidate_captions(artist, topic):
+    print("Finding %s lyrics about \"%s\"..." % (artist, topic))
+
     candidates = {}
 
-    word = word.lower()
-    songs_containing_word = word_indices.get(word)
+    topic = topic.lower()
+    songs_containing_word = word_indices.get(topic)
     if not songs_containing_word:
+        print("Sorry, we couldn't find any %s lyrics related to \"%s\"!" %
+              (artist, topic))
         return candidates
     for song_title, indices in songs_containing_word.items():
         lines = lyrics[song_title]
         for index in indices:
             caption = get_surrounding_lines(lines, index)
             candidates[caption] = song_title
+    print("Found %d captions for %s..." % (len(candidates), topic))
+    for caption, title in candidates.items():
+        print('\n"%s" - %s, "%s"' % (caption, artist, title))
+    print()
     return candidates
 
 
-if __name__ == "__main__":
-    artist = sys.argv[1]
-    topic = sys.argv[2]
-    print("Finding %s lyrics about \"%s\"..." % (artist, topic))
-    load_data(artist)
-    candidates = find_candidate_captions(artist, topic)
-    if not candidates:
-        print("Sorry, we couldn't find any %s lyrics related to \"%s\"!" %
-              (artist, topic))
-        exit()
-    print("Found %d captions..." % len(candidates))
+def load_space():
+    print('Loading semantic space...')
+    return SemanticSpace.from_csv('spaces/lemmas.w2v.gz')
 
-    for caption, title in candidates.items():
-        print('\n"%s" - %s, "%s"' % (caption, artist, title))
+if __name__ == "__main__":
+    artist, topic = sys.argv[1:3]
+    load_data(artist)
+    # semantic space vars
+    use_space = False  # whether or not to use/load semantic space
+    semantic_space = None
+    related_words = []
+    if len(sys.argv) > 3:
+        use_space = sys.argv[3]
+    if use_space:
+        semantic_space = load_space()
+        try:
+            # get (word, distance) tuples
+            word_distances = semantic_space.most_similar([topic])[topic]
+            # get the first n words from those tuples
+            related_words = [word_dist[0] for word_dist
+                             in word_distances[:NUM_SIMILAR_WORDS]
+                             if word_dist[0] != topic]
+            print('Found similar topics: ' + ', '.join(related_words))
+        except ValueError:
+            pass
+    candidates = {}
+    for topic in [topic] + related_words:
+        candidates.update(find_candidate_captions(artist, topic))
